@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: xinfu-postgres
+    environment:
+      POSTGRES_DB: xinfu_ai
+      POSTGRES_USER: xinfu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xinfu123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xinfu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: xinfu-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis123}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: xinfu-backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://xinfu:${POSTGRES_PASSWORD:-xinfu123}@postgres:5432/xinfu_ai
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production-at-least-32-chars}
+      - WECOM_CORP_ID=${WECOM_CORP_ID:-}
+      - WECOM_AGENT_ID=${WECOM_AGENT_ID:-}
+      - WECOM_SECRET=${WECOM_SECRET:-}
+      - WECOM_CALLBACK_URL=${WECOM_CALLBACK_URL:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-change-me-32-chars-encryption!!}
+      - DEBUG=true
+    volumes:
+      - ./backend/app:/app/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: xinfu-frontend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
