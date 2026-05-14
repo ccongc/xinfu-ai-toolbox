@@ -255,10 +255,24 @@ async def get_site_config():
         }
 
 
-# 静态文件服务（前端构建产物）- 必须放在所有路由之后
+# 静态文件服务（前端构建产物）- SPA回退
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pathlib import Path
 
 static_dir = Path(__file__).parent.parent / "static"
+
+
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    # 先挂载静态资源目录（js/css/images等）
+    assets_dir = static_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    # SPA回退：所有未匹配的GET请求返回index.html，由前端路由处理
+    @app.get("/{path:path}")
+    async def spa_fallback(path: str):
+        file_path = static_dir / path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(static_dir / "index.html"))
