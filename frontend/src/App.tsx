@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import AgentMarket from './pages/AgentMarket'
@@ -9,10 +10,22 @@ import MyAgents from './pages/MyAgents'
 import AppNav from './pages/AppNav'
 import Admin from './pages/Admin'
 
-function App() {
+/** 判断路径是否为管理后台 /admin-{salt} */
+function isAdminPath(pathname: string): boolean {
+  return /^\/admin-[a-zA-Z0-9]+/.test(pathname)
+}
+
+function CatchAll() {
+  const { pathname } = useLocation()
+  if (isAdminPath(pathname)) {
+    return <Admin />
+  }
+  return <Navigate to="/" replace />
+}
+
+export default function App() {
   return (
     <Routes>
-      {/* 用户界面 */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/agent-market" element={<AgentMarket />} />
@@ -22,13 +35,7 @@ function App() {
       <Route path="/agent/publish/:id" element={<AgentPublish />} />
       <Route path="/my/agents" element={<MyAgents />} />
       <Route path="/apps" element={<AppNav />} />
-
-      {/* 管理界面 - 匹配 /admin-{salt} 及其子路径 */}
-      <Route path="/admin-*" element={<Admin />} />
-
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<CatchAll />} />
     </Routes>
   )
 }
-
-export default App
