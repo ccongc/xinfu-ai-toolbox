@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Button, Typography, Card, Row, Col, Statistic, message } from 'antd'
+import { useState, useEffect } from 'react'
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
+import { Layout, Menu, Button, Typography, Card, Row, Col, Statistic, Spin, Result } from 'antd'
 import {
   DashboardOutlined,
   UserOutlined,
@@ -10,11 +10,9 @@ import {
   SettingOutlined,
   HomeOutlined,
   AuditOutlined,
-  LayoutOutlined,
-  SwapOutlined,
 } from '@ant-design/icons'
 import { systemApi, authApi } from '../../services/api'
-import { logout, getUserInfo, setAdminSalt } from '../../utils/auth'
+import { logout, getUserInfo, isLoggedIn, setAdminSalt as saveAdminSalt } from '../../utils/auth'
 import UserManage from './UserManage'
 import AgentManage from './AgentManage'
 import ModelManage from './ModelManage'
@@ -24,13 +22,58 @@ import SystemManage from './SystemManage'
 const { Sider, Content, Header: AntHeader } = Layout
 const { Title } = Typography
 
-interface AdminProps {
-  salt: string
-}
-
-export default function Admin({ salt }: AdminProps) {
+export default function Admin() {
+  const { salt } = useParams<{ salt: string }>()
   const navigate = useNavigate()
   const location = useLocation()
+  const [checking, setChecking] = useState(true)
+  const [valid, setValid] = useState(false)
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!isLoggedIn()) {
+        // 未登录，跳转到登录页，登录后回来
+        window.location.href = `/login?redirect=/admin-${salt}`
+        return
+      }
+      // 已登录，校验是否管理员 + salt是否正确
+      try {
+        const res = await authApi.adminPathInfo()
+        const data = (res as any)?.data || res
+        if (data?.salt === salt) {
+          saveAdminSalt(salt!)
+          setValid(true)
+        } else {
+          setValid(false)
+        }
+      } catch {
+        // 非管理员或salt不匹配
+        setValid(false)
+      }
+      setChecking(false)
+    }
+    checkAccess()
+  }, [salt])
+
+  if (checking) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" tip="验证管理员身份..." />
+      </div>
+    )
+  }
+
+  if (!valid) {
+    return (
+      <Result
+        status="403"
+        title="无权访问"
+        subTitle="此管理路径无效或您没有管理员权限"
+        extra={<Button type="primary" href="/">返回首页</Button>}
+      />
+    )
+  }
+
   const user = getUserInfo()
   const basePath = `/admin-${salt}`
 
@@ -43,7 +86,9 @@ export default function Admin({ salt }: AdminProps) {
     { key: `${basePath}/system`, label: '系统管理', icon: <SettingOutlined /> },
   ]
 
-  const currentKey = menuItems.find(m => location.pathname === m.key || (m.key !== basePath && location.pathname.startsWith(m.key)))?.key || basePath
+  const currentKey = menuItems.find(m =>
+    location.pathname === m.key || (m.key !== basePath && location.pathname.startsWith(m.key))
+  )?.key || basePath
 
   return (
     <Layout className="admin-layout" style={{ minHeight: '100vh' }}>
@@ -73,7 +118,7 @@ export default function Admin({ salt }: AdminProps) {
         </AntHeader>
         <Content style={{ margin: 24, padding: 24, background: '#f0f2f5', minHeight: 280 }}>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Dashboard salt={salt!} />} />
             <Route path="/users" element={<UserManage />} />
             <Route path="/agents" element={<AgentManage />} />
             <Route path="/models" element={<ModelManage />} />
@@ -86,11 +131,11 @@ export default function Admin({ salt }: AdminProps) {
   )
 }
 
-function Dashboard() {
+function Dashboard({ salt }: { salt: string }) {
   const [stats, setStats] = useState<any>({})
   const [adminPath, setAdminPathData] = useState<string>('')
 
-  useState(() => {
+  useEffect(() => {
     systemApi.stats().then((res: any) => {
       setStats((res?.data || res) || {})
     })
@@ -98,7 +143,7 @@ function Dashboard() {
       const data = res?.data || res
       setAdminPathData(data?.admin_path || '')
     })
-  })
+  }, [])
 
   return (
     <div>

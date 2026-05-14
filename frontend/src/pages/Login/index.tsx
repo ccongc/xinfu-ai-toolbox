@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Layout, Card, Form, Input, Button, Tabs, message, Typography, Space } from 'antd'
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { authApi } from '../../services/api'
@@ -11,11 +11,13 @@ const { Title, Text } = Typography
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect') || '/agent-market'
   const [loading, setLoading] = useState(false)
   const [wecomUrl, setWecomUrl] = useState<string | null>(null)
 
   if (isLoggedIn()) {
-    navigate('/agent-market')
+    navigate(redirect)
     return null
   }
 
@@ -26,7 +28,7 @@ export default function Login() {
       const data = res?.data || res
       saveLoginData(data)
       message.success('登录成功')
-      navigate('/agent-market')
+      navigate(redirect)
     } catch (e: any) {
       message.error(e.message || '登录失败')
     } finally {
@@ -41,7 +43,7 @@ export default function Login() {
       const data = res?.data || res
       saveLoginData(data)
       message.success('注册成功')
-      navigate('/agent-market')
+      navigate(redirect)
     } catch (e: any) {
       message.error(e.message || '注册失败')
     } finally {
