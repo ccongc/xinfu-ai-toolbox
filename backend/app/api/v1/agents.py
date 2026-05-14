@@ -13,6 +13,7 @@ from ...schemas.agent import (
     AgentReviewRequest, AgentListQuery,
 )
 from ...utils.pagination import PaginatedResponse, ApiResponse
+from ...utils.op_log import write_op_log
 
 # 用户侧路由
 user_router = APIRouter()
@@ -150,6 +151,7 @@ async def publish_agent(
     db.add(agent)
     await db.commit()
     await db.refresh(agent)
+    await write_op_log(db, user.id, "publish_agent", "agent", agent.id, {"name": agent.name})
     return ApiResponse(data=_agent_to_response(agent, user.display_name or user.username))
 
 
@@ -266,6 +268,7 @@ async def admin_publish_agent(
     db.add(agent)
     await db.commit()
     await db.refresh(agent)
+    await write_op_log(db, admin.id, "admin_publish_agent", "agent", agent.id, {"name": agent.name})
     return ApiResponse(data=_agent_to_response(agent, "系统/官方"))
 
 
@@ -286,6 +289,7 @@ async def approve_agent(
     agent.reviewed_at = datetime.utcnow()
     agent.review_comment = req.comment
     await db.commit()
+    await write_op_log(db, admin.id, "approve_agent", "agent", agent_id, {"name": agent.name})
     return ApiResponse(message="审核通过")
 
 
@@ -306,6 +310,7 @@ async def reject_agent(
     agent.reviewed_at = datetime.utcnow()
     agent.review_comment = req.comment
     await db.commit()
+    await write_op_log(db, admin.id, "reject_agent", "agent", agent_id, {"name": agent.name})
     return ApiResponse(message="已拒绝")
 
 
@@ -342,6 +347,7 @@ async def offline_agent(agent_id: int, admin: User = Depends(require_admin), db:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Agent不存在")
     agent.status = "offline"
     await db.commit()
+    await write_op_log(db, admin.id, "offline_agent", "agent", agent_id, {"name": agent.name})
     return ApiResponse(message="已下架")
 
 
@@ -352,6 +358,7 @@ async def delete_agent(agent_id: int, admin: User = Depends(require_admin), db: 
     agent = result.scalar_one_or_none()
     if not agent:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Agent不存在")
+    await write_op_log(db, admin.id, "delete_agent", "agent", agent_id, {"name": agent.name})
     await db.delete(agent)
     await db.commit()
     return ApiResponse(message="已删除")

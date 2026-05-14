@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Tabs, Card, Form, Input, Button, Table, message, Popconfirm, Typography, Tag } from 'antd'
+import { Tabs, Card, Form, Input, Button, Table, message, Popconfirm, Typography, Tag, Modal, Switch, Space } from 'antd'
 import { systemApi, homepageApi, templateApi, navLinkApi } from '../../services/api'
 
 const { TextArea } = Input
@@ -121,14 +121,90 @@ function HomepageTab() {
 }
 
 function TemplateTab() {
-  const [templates, setTemplates] = useState<any[]>([])
+  const [templates, setTemplates,] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editModal, setEditModal] = useState(false)
+  const [editTemplate, setEditTemplate] = useState<any>(null)
+  const [form] = Form.useForm()
 
-  useEffect(() => {
+  const fetchTemplates = () => {
+    setLoading(true)
     templateApi.adminList().then((res: any) => {
       setTemplates(res?.data || res || [])
     }).finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { fetchTemplates() }, [])
+
+  const DEFAULT_STYLE = {
+    primaryColor: '#1677ff',
+    backgroundColor: '#ffffff',
+    chatBubbleUser: '#1677ff',
+    chatBubbleBot: '#f0f0f0',
+    fontFamily: 'system-ui',
+    fontSize: 14,
+    borderRadius: 8,
+    headerVisible: true,
+    headerTitle: 'AI助手',
+    inputPlaceholder: '请输入您的问题...',
+    sendButtonColor: '#1677ff',
+    welcomeMessage: '您好，请问有什么可以帮助您的？',
+  }
+
+  const handleAdd = () => {
+    setEditTemplate(null)
+    form.resetFields()
+    form.setFieldsValue({
+      name: '',
+      description: '',
+      is_default: false,
+      is_active: true,
+      style_config: JSON.stringify(DEFAULT_STYLE, null, 2),
+      layout_config: JSON.stringify({ showSidebar: false, maxWidth: 800, messageMaxWidth: '70%', showTimestamp: true, showAvatar: true, markdownRender: true, codeHighlight: true }, null, 2),
+    })
+    setEditModal(true)
+  }
+
+  const handleEdit = (record: any) => {
+    setEditTemplate(record)
+    form.setFieldsValue({
+      name: record.name,
+      description: record.description || '',
+      is_default: record.is_default,
+      is_active: record.is_active,
+      style_config: record.style_config ? JSON.stringify(record.style_config, null, 2) : JSON.stringify(DEFAULT_STYLE, null, 2),
+      layout_config: record.layout_config ? JSON.stringify(record.layout_config, null, 2) : '',
+    })
+    setEditModal(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields()
+      const styleConfig = JSON.parse(values.style_config)
+      const layoutConfig = values.layout_config ? JSON.parse(values.layout_config) : null
+      const payload = {
+        name: values.name,
+        description: values.description || null,
+        style_config: styleConfig,
+        layout_config: layoutConfig,
+        is_default: values.is_default,
+        is_active: values.is_active,
+      }
+
+      if (editTemplate) {
+        await templateApi.update(editTemplate.id, payload)
+        message.success('更新成功')
+      } else {
+        await templateApi.create(payload)
+        message.success('添加成功')
+      }
+      setEditModal(false)
+      fetchTemplates()
+    } catch (e: any) {
+      if (e.message) message.error(e.message)
+    }
+  }
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
@@ -137,24 +213,62 @@ function TemplateTab() {
     { title: '默认', dataIndex: 'is_default', key: 'is_default', render: (v: boolean) => v ? <Tag color="blue">默认</Tag> : null },
     { title: '状态', dataIndex: 'is_active', key: 'is_active', render: (v: boolean) => v ? <Tag color="green">启用</Tag> : <Tag color="red">禁用</Tag> },
     {
-      title: '操作', key: 'action', width: 120,
+      title: '操作', key: 'action', width: 180,
       render: (_: any, record: any) => (
-        <Popconfirm title="确定删除？" onConfirm={async () => {
-          try {
-            await templateApi.delete(record.id)
-            message.success('已删除')
-            setTemplates(prev => prev.filter(t => t.id !== record.id))
-          } catch (e: any) {
-            message.error(e.message || '删除失败')
-          }
-        }}>
-          <Button type="link" size="small" danger>删除</Button>
-        </Popconfirm>
+        <Space size="small">
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
+          <Popconfirm title="确定删除？" onConfirm={async () => {
+            try {
+              await templateApi.delete(record.id)
+              message.success('已删除')
+              fetchTemplates()
+            } catch (e: any) {
+              message.error(e.message || '删除失败')
+            }
+          }}>
+            <Button type="link" size="small" danger>删除</Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ]
 
-  return <Table columns={columns} dataSource={templates} rowKey="id" loading={loading} pagination={false} />
+  return (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <Button type="primary" onClick={handleAdd}>添加模板</Button>
+      </div>
+      <Table columns={columns} dataSource={templates} rowKey="id" loading={loading} pagination={false} />
+      <Modal
+        title={editTemplate ? '编辑模板' : '添加模板'}
+        open={editModal}
+        onOk={handleSave}
+        onCancel={() => setEditModal(false)}
+        width={700}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input />
+          </Form.Item>
+          <Form.Item name="is_default" label="设为默认" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <Form.Item name="is_active" label="启用" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <Form.Item name="style_config" label="样式配置(JSON)" rules={[{ required: true, message: '请输入样式配置' }]}>
+            <TextArea rows={10} />
+          </Form.Item>
+          <Form.Item name="layout_config" label="布局配置(JSON)">
+            <TextArea rows={6} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
 }
 
 function NavLinkTab() {

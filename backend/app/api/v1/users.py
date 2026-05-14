@@ -10,6 +10,7 @@ from ...models.agent import Agent
 from ...schemas.user import UserListResponse, UserUpdateRequest, UserRoleUpdateRequest, UserListQuery, AdminResetPasswordRequest
 from ...core.security import hash_password
 from ...utils.pagination import PaginatedResponse, ApiResponse
+from ...utils.op_log import write_op_log
 
 router = APIRouter()
 
@@ -108,6 +109,7 @@ async def update_user(
     if req.status is not None:
         user.status = req.status
     await db.commit()
+    await write_op_log(db, admin.id, "update_user", "user", user_id, {"username": user.username})
 
     role_name = None
     if user.role_id:
@@ -140,6 +142,7 @@ async def assign_role(
 
     user.role_id = req.role_id
     await db.commit()
+    await write_op_log(db, admin.id, "assign_role", "user", user_id, {"username": user.username, "role_id": req.role_id})
     return ApiResponse(message="角色分配成功")
 
 
@@ -159,6 +162,7 @@ async def delete_user(
     # 将该用户发布的Agent的publisher_id置为NULL，解除外键引用
     from sqlalchemy import update as sa_update
     await db.execute(sa_update(Agent).where(Agent.publisher_id == user_id).values(publisher_id=None))
+    await write_op_log(db, admin.id, "delete_user", "user", user_id, {"username": user.username})
     await db.delete(user)
     await db.commit()
     return ApiResponse(message="用户已删除")
@@ -178,4 +182,5 @@ async def reset_password(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="用户不存在")
     user.hashed_password = hash_password(req.new_password)
     await db.commit()
+    await write_op_log(db, admin.id, "reset_password", "user", user_id, {"username": user.username})
     return ApiResponse(message="密码重置成功")

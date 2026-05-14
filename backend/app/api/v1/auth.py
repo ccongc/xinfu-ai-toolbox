@@ -16,6 +16,7 @@ from ...schemas.auth import (
     WecomCallbackRequest,
 )
 from ...utils.pagination import ApiResponse
+from ...utils.op_log import write_op_log
 
 router = APIRouter()
 
@@ -266,6 +267,7 @@ async def change_password(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="原密码错误")
     user.hashed_password = hash_password(req.new_password)
     await db.commit()
+    await write_op_log(db, user.id, "change_password", "user", user.id)
     return ApiResponse(message="密码修改成功")
 
 

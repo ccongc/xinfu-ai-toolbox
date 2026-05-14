@@ -116,6 +116,20 @@ export default function Home() {
               <Title level={2}>{sections.partner.title || '合作伙伴'}</Title>
               <Paragraph>{sections.partner.subtitle || ''}</Paragraph>
             </div>
+            {(sections.partner.content?.items || []).length > 0 && (
+              <Row gutter={[24, 24]} justify="center">
+                {(sections.partner.content.items || []).map((item: any, idx: number) => (
+                  <Col xs={24} sm={12} md={6} key={idx}>
+                    <Card hoverable style={{ textAlign: 'center', height: '100%' }} bordered={false}>
+                      {item.logo && <img src={item.logo} alt={item.title} style={{ maxHeight: 60, marginBottom: 12 }} />}
+                      {item.icon && !item.logo && <div style={{ marginBottom: 16 }}>{iconMap[item.icon] || <RobotOutlined style={{ fontSize: 36, color: '#1677ff' }} />}</div>}
+                      <Title level={5}>{item.title}</Title>
+                      {item.description && <Paragraph type="secondary">{item.description}</Paragraph>}
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            )}
           </div>
         )}
       </Layout.Content>
