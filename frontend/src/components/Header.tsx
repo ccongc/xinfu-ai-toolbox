@@ -75,7 +75,8 @@ export default function Header() {
           selectedKeys={[currentKey]}
           items={navItems}
           onClick={({ key }) => navigate(key)}
-          style={{ flex: 1, minWidth: 0 }}
+          style={{ flex: 1 }}
+          disabledOverflow
         />
       </div>
       <div>
