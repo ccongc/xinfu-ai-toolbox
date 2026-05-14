@@ -28,12 +28,15 @@ async def _get_admin_salt() -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期"""
-    # 启动时初始化数据库
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # 启动时初始化数据库（连接失败不崩溃，等数据库就绪）
+    try:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
-    # 初始化种子数据
-    await _init_seed_data()
+        # 初始化种子数据
+        await _init_seed_data()
+    except Exception as e:
+        print(f"⚠️ 数据库初始化失败（将在首次请求时重试）: {e}")
 
     yield
 
@@ -208,7 +211,7 @@ app.include_router(api_router)
 
 @app.get("/health")
 async def health_check():
-    """健康检查"""
+    """健康检查（不依赖数据库）"""
     return {"status": "ok", "version": settings.APP_VERSION}
 
 
