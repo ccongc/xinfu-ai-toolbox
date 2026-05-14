@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getToken, getRefreshToken, saveLoginData, logout } from './auth'
+import { getToken, getRefreshToken, saveLoginData } from './auth'
 
 const request = axios.create({
   baseURL: '/api/v1',
@@ -47,11 +47,11 @@ request.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${data.access_token}`
           return request(originalRequest)
         } catch {
-          logout()
+          // 刷新失败，不自动跳转，让调用方处理
           return Promise.reject(error)
         }
       }
-      logout()
+      // 无refreshToken，不自动跳转
     }
 
     const message = error.response?.data?.detail || error.response?.data?.message || error.message || '网络错误'

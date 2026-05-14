@@ -47,7 +47,6 @@ export default function Admin() {
           setValid(false)
         }
       } catch {
-        // 非管理员或salt不匹配
         setValid(false)
       }
       setChecking(false)
@@ -74,11 +73,17 @@ export default function Admin() {
     )
   }
 
+  return <AdminLayout salt={salt!} />
+}
+
+function AdminLayout({ salt }: { salt: string }) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const user = getUserInfo()
   const basePath = `/admin-${salt}`
 
   const menuItems = [
-    { key: basePath, label: '仪表盘', icon: <DashboardOutlined /> },
+    { key: `${basePath}/`, label: '仪表盘', icon: <DashboardOutlined /> },
     { key: `${basePath}/users`, label: '用户管理', icon: <UserOutlined /> },
     { key: `${basePath}/agents`, label: 'Agent管理', icon: <RobotOutlined /> },
     { key: `${basePath}/models`, label: '大模型管理', icon: <ApiOutlined /> },
@@ -87,8 +92,8 @@ export default function Admin() {
   ]
 
   const currentKey = menuItems.find(m =>
-    location.pathname === m.key || (m.key !== basePath && location.pathname.startsWith(m.key))
-  )?.key || basePath
+    location.pathname === m.key || (m.key !== `${basePath}/` && location.pathname.startsWith(m.key))
+  )?.key || `${basePath}/`
 
   return (
     <Layout className="admin-layout" style={{ minHeight: '100vh' }}>
@@ -118,7 +123,7 @@ export default function Admin() {
         </AntHeader>
         <Content style={{ margin: 24, padding: 24, background: '#f0f2f5', minHeight: 280 }}>
           <Routes>
-            <Route path="/" element={<Dashboard salt={salt!} />} />
+            <Route path="/" element={<Dashboard salt={salt} />} />
             <Route path="/users" element={<UserManage />} />
             <Route path="/agents" element={<AgentManage />} />
             <Route path="/models" element={<ModelManage />} />

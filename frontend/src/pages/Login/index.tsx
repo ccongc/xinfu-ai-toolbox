@@ -16,21 +16,16 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [wecomUrl, setWecomUrl] = useState<string | null>(null)
 
-  if (isLoggedIn()) {
-    navigate(redirect)
-    return null
-  }
-
   const handleLogin = async (values: any) => {
     setLoading(true)
     try {
       const res = await authApi.login(values)
-      const data = res?.data || res
+      const data = (res as any)?.data || res
       saveLoginData(data)
       message.success('登录成功')
       navigate(redirect)
     } catch (e: any) {
-      message.error(e.message || '登录失败')
+      message.error(e.message || '用户名或密码错误')
     } finally {
       setLoading(false)
     }
@@ -40,7 +35,7 @@ export default function Login() {
     setLoading(true)
     try {
       const res = await authApi.register(values)
-      const data = res?.data || res
+      const data = (res as any)?.data || res
       saveLoginData(data)
       message.success('注册成功')
       navigate(redirect)
@@ -54,7 +49,7 @@ export default function Login() {
   const handleWecomLogin = async () => {
     try {
       const res = await authApi.wecomQrUrl()
-      const url = res?.data || res
+      const url = (res as any)?.data || res
       if (url) {
         setWecomUrl(url)
         window.open(url, '_blank', 'width=600,height=500')
