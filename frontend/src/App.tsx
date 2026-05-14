@@ -23,8 +23,8 @@ function App() {
       <Route path="/my/agents" element={<MyAgents />} />
       <Route path="/apps" element={<AppNav />} />
 
-      {/* 管理界面 - 从URL中提取salt */}
-      <Route path="/admin-:salt/*" element={<Admin />} />
+      {/* 管理界面 - 匹配 /admin-{salt} 及其子路径 */}
+      <Route path="/admin-*" element={<Admin />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

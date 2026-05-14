@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu, Button, Typography, Card, Row, Col, Statistic, Spin, Result } from 'antd'
 import {
   DashboardOutlined,
@@ -22,26 +22,34 @@ import SystemManage from './SystemManage'
 const { Sider, Content, Header: AntHeader } = Layout
 const { Title } = Typography
 
+/** 从URL路径中提取salt，如 /admin-axvcsv4r/users → axvcsv4r */
+function extractSalt(pathname: string): string | null {
+  const match = pathname.match(/^\/admin-([a-zA-Z0-9]+)/)
+  return match ? match[1] : null
+}
+
 export default function Admin() {
-  const { salt } = useParams<{ salt: string }>()
-  const navigate = useNavigate()
   const location = useLocation()
+  const navigate = useNavigate()
+  const salt = extractSalt(location.pathname)
   const [checking, setChecking] = useState(true)
   const [valid, setValid] = useState(false)
 
   useEffect(() => {
     const checkAccess = async () => {
+      if (!salt) {
+        setChecking(false)
+        return
+      }
       if (!isLoggedIn()) {
-        // 未登录，跳转到登录页，登录后回来
         window.location.href = `/login?redirect=/admin-${salt}`
         return
       }
-      // 已登录，校验是否管理员 + salt是否正确
       try {
         const res = await authApi.adminPathInfo()
         const data = (res as any)?.data || res
         if (data?.salt === salt) {
-          saveAdminSalt(salt!)
+          saveAdminSalt(salt)
           setValid(true)
         } else {
           setValid(false)
@@ -62,7 +70,7 @@ export default function Admin() {
     )
   }
 
-  if (!valid) {
+  if (!valid || !salt) {
     return (
       <Result
         status="403"
@@ -73,7 +81,7 @@ export default function Admin() {
     )
   }
 
-  return <AdminLayout salt={salt!} />
+  return <AdminLayout salt={salt} />
 }
 
 function AdminLayout({ salt }: { salt: string }) {
@@ -123,12 +131,12 @@ function AdminLayout({ salt }: { salt: string }) {
         </AntHeader>
         <Content style={{ margin: 24, padding: 24, background: '#f0f2f5', minHeight: 280 }}>
           <Routes>
-            <Route path="/" element={<Dashboard salt={salt} />} />
-            <Route path="/users" element={<UserManage />} />
-            <Route path="/agents" element={<AgentManage />} />
-            <Route path="/models" element={<ModelManage />} />
-            <Route path="/logs" element={<LogManage />} />
-            <Route path="/system" element={<SystemManage />} />
+            <Route path={`/admin-${salt}`} element={<Dashboard salt={salt} />} />
+            <Route path={`/admin-${salt}/users`} element={<UserManage />} />
+            <Route path={`/admin-${salt}/agents`} element={<AgentManage />} />
+            <Route path={`/admin-${salt}/models`} element={<ModelManage />} />
+            <Route path={`/admin-${salt}/logs`} element={<LogManage />} />
+            <Route path={`/admin-${salt}/system`} element={<SystemManage />} />
           </Routes>
         </Content>
       </Layout>
