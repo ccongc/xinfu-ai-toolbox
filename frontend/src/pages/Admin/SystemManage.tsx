@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Tabs, Card, Form, Input, Button, Table, message, Popconfirm, Typography, Tag, Modal, Switch, Space } from 'antd'
+import { Tabs, Card, Form, Input, Button, Table, message, Popconfirm, Typography, Tag, Modal, Switch, Space, Image } from 'antd'
 import { systemApi, homepageApi, templateApi, navLinkApi } from '../../services/api'
 
 const { TextArea } = Input
@@ -20,6 +20,9 @@ export default function SystemManage() {
 function ConfigTab() {
   const [configs, setConfigs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editModal, setEditModal] = useState(false)
+  const [editConfig, setEditConfig] = useState<any>(null)
+  const [editValue, setEditValue] = useState('')
 
   const fetchConfigs = () => {
     setLoading(true)
@@ -34,29 +37,95 @@ function ConfigTab() {
     try {
       await systemApi.updateConfig(key, { config_value: value })
       message.success('更新成功')
+      setEditModal(false)
       fetchConfigs()
     } catch (e: any) {
       message.error(e.message || '更新失败')
     }
   }
 
+  const handleEdit = (record: any) => {
+    setEditConfig(record)
+    setEditValue(record.config_value === '***' ? '' : (record.config_value || ''))
+    setEditModal(true)
+  }
+
+  const renderConfigValue = (key: string, value: string) => {
+    if (key === 'site_logo' && value && !value.startsWith('***')) {
+      if (value.startsWith('data:image') || value.startsWith('http')) {
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Image src={value} alt="logo" width={32} height={32} style={{ objectFit: 'contain' }} />
+            <span style={{ color: '#999', fontSize: 12 }}>已配置</span>
+          </div>
+        )
+      }
+    }
+    if (value && value.length > 50) {
+      return <span style={{ color: '#999', fontSize: 12 }}>{value.slice(0, 30)}...({value.length}字符)</span>
+    }
+    return value
+  }
+
   const columns = [
-    { title: '配置键', dataIndex: 'config_key', key: 'config_key' },
-    { title: '配置值', dataIndex: 'config_value', key: 'config_value' },
-    { title: '类型', dataIndex: 'value_type', key: 'value_type', render: (v: string) => <Tag>{v}</Tag> },
-    { title: '说明', dataIndex: 'description', key: 'description' },
+    { title: '配置键', dataIndex: 'config_key', key: 'config_key', width: 160 },
+    { title: '配置值', dataIndex: 'config_value', key: 'config_value', render: (v: string, record: any) => renderConfigValue(record.config_key, v) },
+    { title: '类型', dataIndex: 'value_type', key: 'value_type', width: 80, render: (v: string) => <Tag>{v}</Tag> },
+    { title: '说明', dataIndex: 'description', key: 'description', width: 180 },
     {
       title: '操作', key: 'action', width: 100,
       render: (_: any, record: any) => (
-        <Button type="link" size="small" onClick={() => {
-          const value = prompt(`编辑 ${record.config_key}:`, record.config_value || '')
-          if (value !== null) handleUpdate(record.config_key, value)
-        }}>编辑</Button>
+        <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
       ),
     },
   ]
 
-  return <Table columns={columns} dataSource={configs} rowKey="id" loading={loading} pagination={false} />
+  return (
+    <div>
+      <Table columns={columns} dataSource={configs} rowKey="id" loading={loading} pagination={false} />
+      <Modal
+        title={`编辑 ${editConfig?.config_key || ''}`}
+        open={editModal}
+        onOk={() => handleUpdate(editConfig.config_key, editValue)}
+        onCancel={() => setEditModal(false)}
+        width={700}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Input.TextArea
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            rows={editConfig?.config_key === 'site_logo' ? 6 : 3}
+            placeholder="请输入配置值"
+          />
+        </div>
+        {editConfig?.config_key === 'site_logo' && editValue && (editValue.startsWith('data:image') || editValue.startsWith('http')) && (
+          <div style={{ marginBottom: 16 }}>
+            <span style={{ color: '#999', marginRight: 8 }}>预览：</span>
+            <Image src={editValue} alt="logo" width={80} height={80} style={{ objectFit: 'contain' }} />
+          </div>
+        )}
+        {editConfig?.config_key === 'site_logo' && (
+          <div>
+            <Button size="small" onClick={() => {
+              const input = document.createElement('input')
+              input.type = 'file'
+              input.accept = 'image/*'
+              input.onchange = (e: any) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = (ev) => {
+                  setEditValue(ev.target?.result as string)
+                }
+                reader.readAsDataURL(file)
+              }
+              input.click()
+            }}>上传图片转Base64</Button>
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
 }
 
 function HomepageTab() {
