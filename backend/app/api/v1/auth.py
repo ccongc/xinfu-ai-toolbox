@@ -81,8 +81,8 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     refresh_token = create_refresh_token({"sub": str(user.id)})
 
     # 更新最后登录时间
-    from datetime import datetime, timezone
-    user.last_login_at = datetime.now(timezone.utc)
+    from datetime import datetime
+    user.last_login_at = datetime.utcnow()
     await db.commit()
 
     user_info = UserInfoResponse(

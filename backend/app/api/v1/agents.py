@@ -283,7 +283,7 @@ async def approve_agent(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Agent不存在")
     agent.status = "approved"
     agent.reviewer_id = admin.id
-    agent.reviewed_at = datetime.now(timezone.utc)
+    agent.reviewed_at = datetime.utcnow()
     agent.review_comment = req.comment
     await db.commit()
     return ApiResponse(message="审核通过")
@@ -296,14 +296,14 @@ async def reject_agent(
     db: AsyncSession = Depends(get_db),
 ):
     """审核拒绝"""
-    from datetime import datetime, timezone
+    from datetime import datetime
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Agent不存在")
     agent.status = "rejected"
     agent.reviewer_id = admin.id
-    agent.reviewed_at = datetime.now(timezone.utc)
+    agent.reviewed_at = datetime.utcnow()
     agent.review_comment = req.comment
     await db.commit()
     return ApiResponse(message="已拒绝")

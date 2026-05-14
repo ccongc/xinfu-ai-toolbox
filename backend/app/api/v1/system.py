@@ -78,7 +78,7 @@ async def get_system_stats(db: AsyncSession = Depends(get_db), admin: User = Dep
     """系统统计概览"""
     from ...models.agent import Agent
     from ...models.operation_log import OperationLog
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     # 用户总数
     user_count = (await db.execute(select(func.count(User.id)))).scalar()
@@ -87,7 +87,7 @@ async def get_system_stats(db: AsyncSession = Depends(get_db), admin: User = Dep
     # 待审核Agent
     pending_count = (await db.execute(select(func.count(Agent.id)).where(Agent.status == "pending"))).scalar()
     # 今日访问
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_visits = (await db.execute(
         select(func.count(OperationLog.id)).where(OperationLog.created_at >= today)
     )).scalar()
