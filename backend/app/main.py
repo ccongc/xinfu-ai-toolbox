@@ -68,9 +68,10 @@ async def _init_seed_data():
     import json
 
     async with async_session_factory() as session:
-        # 检查是否已初始化
-        result = await session.execute(select(Role))
-        if result.scalar_one_or_none():
+        # 检查是否已初始化（用count避免多行报错）
+        from sqlalchemy import func
+        result = await session.execute(select(func.count(Role.id)))
+        if result.scalar() > 0:
             return
 
         # 创建角色
