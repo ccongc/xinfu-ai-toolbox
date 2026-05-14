@@ -1,7 +1,7 @@
 """系统管理接口"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from ...core.deps import get_db, require_admin
 from ...core.admin_path import generate_admin_salt, get_admin_path_prefix
@@ -78,7 +78,7 @@ async def get_system_stats(db: AsyncSession = Depends(get_db), admin: User = Dep
     """系统统计概览"""
     from ...models.agent import Agent
     from ...models.operation_log import OperationLog
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timezone
 
     # 用户总数
     user_count = (await db.execute(select(func.count(User.id)))).scalar()
@@ -92,7 +92,6 @@ async def get_system_stats(db: AsyncSession = Depends(get_db), admin: User = Dep
         select(func.count(OperationLog.id)).where(OperationLog.created_at >= today)
     )).scalar()
 
-    from sqlalchemy import func
     return ApiResponse(data={
         "user_count": user_count,
         "agent_count": agent_count,
