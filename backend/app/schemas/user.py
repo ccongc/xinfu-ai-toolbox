@@ -33,6 +33,10 @@ class UserRoleUpdateRequest(BaseModel):
     role_id: int
 
 
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+
 class UserListQuery(BaseModel):
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)

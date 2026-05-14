@@ -42,6 +42,8 @@ export const userApi = {
   detail: (id: number) => request.get(`/admin/users/${id}`),
   update: (id: number, data: any) => request.put(`/admin/users/${id}`, data),
   assignRole: (id: number, data: any) => request.put(`/admin/users/${id}/role`, data),
+  delete: (id: number) => request.delete(`/admin/users/${id}`),
+  resetPassword: (id: number, data: any) => request.put(`/admin/users/${id}/reset-password`, data),
 }
 
 // ===== 大模型管理 =====

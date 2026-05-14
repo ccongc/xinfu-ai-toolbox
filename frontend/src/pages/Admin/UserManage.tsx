@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Table, Tag, Button, Modal, Form, Input, Select, message, Space } from 'antd'
+import { Table, Tag, Button, Modal, Form, Input, Select, message, Space, Popconfirm } from 'antd'
 import { userApi } from '../../services/api'
 
 export default function UserManage() {
@@ -10,6 +10,9 @@ export default function UserManage() {
   const [keyword, setKeyword] = useState('')
   const [editModal, setEditModal] = useState(false)
   const [editUser, setEditUser] = useState<any>(null)
+  const [resetModal, setResetModal] = useState(false)
+  const [resetUser, setResetUser] = useState<any>(null)
+  const [resetForm] = Form.useForm()
   const [form] = Form.useForm()
 
   const fetchUsers = () => {
@@ -47,6 +50,33 @@ export default function UserManage() {
     }
   }
 
+  const handleDelete = async (userId: number) => {
+    try {
+      await userApi.delete(userId)
+      message.success('删除成功')
+      fetchUsers()
+    } catch (e: any) {
+      message.error(e.message || '删除失败')
+    }
+  }
+
+  const handleResetPassword = (user: any) => {
+    setResetUser(user)
+    resetForm.resetFields()
+    setResetModal(true)
+  }
+
+  const handleResetSave = async () => {
+    try {
+      const values = await resetForm.validateFields()
+      await userApi.resetPassword(resetUser.id, { new_password: values.new_password })
+      message.success('密码重置成功')
+      setResetModal(false)
+    } catch (e: any) {
+      message.error(e.message || '重置失败')
+    }
+  }
+
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
     { title: '用户名', dataIndex: 'username', key: 'username' },
@@ -63,9 +93,20 @@ export default function UserManage() {
     {
       title: '操作',
       key: 'action',
-      width: 100,
+      width: 220,
       render: (_: any, record: any) => (
-        <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
+        <Space size="small">
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
+          <Button type="link" size="small" onClick={() => handleResetPassword(record)}>重置密码</Button>
+          <Popconfirm
+            title="确定删除该用户？"
+            onConfirm={() => handleDelete(record.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="link" size="small" danger>删除</Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ]
@@ -114,6 +155,43 @@ export default function UserManage() {
               { label: '正常', value: 'active' },
               { label: '禁用', value: 'disabled' },
             ]} />
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Modal
+        title={`重置密码 - ${resetUser?.username || ''}`}
+        open={resetModal}
+        onOk={handleResetSave}
+        onCancel={() => setResetModal(false)}
+      >
+        <Form form={resetForm} layout="vertical">
+          <Form.Item
+            name="new_password"
+            label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 6, message: '密码至少6位' },
+            ]}
+          >
+            <Input.Password placeholder="请输入新密码" />
+          </Form.Item>
+          <Form.Item
+            name="confirm_password"
+            label="确认密码"
+            dependencies={['new_password']}
+            rules={[
+              { required: true, message: '请确认新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('new_password') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('两次密码不一致'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="请确认新密码" />
           </Form.Item>
         </Form>
       </Modal>

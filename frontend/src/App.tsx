@@ -9,6 +9,7 @@ import AgentPublish from './pages/AgentPublish'
 import MyAgents from './pages/MyAgents'
 import AppNav from './pages/AppNav'
 import Admin from './pages/Admin'
+import ChangePassword from './pages/ChangePassword'
 
 /** 判断路径是否为管理后台 /admin-{salt} */
 function isAdminPath(pathname: string): boolean {
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/agent/publish" element={<AgentPublish />} />
       <Route path="/agent/publish/:id" element={<AgentPublish />} />
       <Route path="/my/agents" element={<MyAgents />} />
+      <Route path="/change-password" element={<ChangePassword />} />
       <Route path="/apps" element={<AppNav />} />
       <Route path="*" element={<CatchAll />} />
     </Routes>

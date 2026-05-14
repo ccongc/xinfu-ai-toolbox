@@ -6,7 +6,8 @@ from sqlalchemy import select, func
 from ...core.deps import get_db, require_admin
 from ...models.user import User
 from ...models.role import Role
-from ...schemas.user import UserListResponse, UserUpdateRequest, UserRoleUpdateRequest, UserListQuery
+from ...schemas.user import UserListResponse, UserUpdateRequest, UserRoleUpdateRequest, UserListQuery, AdminResetPasswordRequest
+from ...core.security import hash_password
 from ...utils.pagination import PaginatedResponse, ApiResponse
 
 router = APIRouter()
@@ -139,3 +140,38 @@ async def assign_role(
     user.role_id = req.role_id
     await db.commit()
     return ApiResponse(message="角色分配成功")
+
+
+@router.delete("/{user_id}")
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """删除用户"""
+    if user_id == admin.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="不能删除自己")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="用户不存在")
+    await db.delete(user)
+    await db.commit()
+    return ApiResponse(message="用户已删除")
+
+
+@router.put("/{user_id}/reset-password")
+async def reset_password(
+    user_id: int,
+    req: AdminResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """重置用户密码（管理员）"""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="用户不存在")
+    user.hashed_password = hash_password(req.new_password)
+    await db.commit()
+    return ApiResponse(message="密码重置成功")

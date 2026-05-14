@@ -9,6 +9,7 @@ import {
   LoginOutlined,
   UnorderedListOutlined,
   SettingOutlined,
+  KeyOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { isLoggedIn, getUserInfo, logout, isAdmin } from '../utils/auth'
@@ -46,6 +47,7 @@ export default function Header() {
     ...(isAdmin() ? [{ key: 'admin', label: '管理后台', icon: <SettingOutlined /> }] : []),
     ...(loggedIn ? [
       { key: '/my/agents', label: '我的Agent', icon: <RocketOutlined /> },
+      { key: '/change-password', label: '修改密码', icon: <KeyOutlined /> },
       { key: 'logout', label: '退出登录', icon: <ExportOutlined /> },
     ] : []),
   ]
