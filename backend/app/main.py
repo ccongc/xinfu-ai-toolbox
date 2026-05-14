@@ -227,3 +227,12 @@ async def get_site_config():
             "siteName": configs.get("site_name", settings.APP_NAME),
             "siteLogo": configs.get("site_logo", ""),
         }
+
+
+# 静态文件服务（前端构建产物）- 必须放在所有路由之后
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")

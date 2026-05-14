@@ -53,3 +53,4 @@ htmlcov/
 # Build
 frontend/lib/
 frontend/es/
+backend/static/
