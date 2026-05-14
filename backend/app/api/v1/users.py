@@ -6,6 +6,7 @@ from sqlalchemy import select, func
 from ...core.deps import get_db, require_admin
 from ...models.user import User
 from ...models.role import Role
+from ...models.agent import Agent
 from ...schemas.user import UserListResponse, UserUpdateRequest, UserRoleUpdateRequest, UserListQuery, AdminResetPasswordRequest
 from ...core.security import hash_password
 from ...utils.pagination import PaginatedResponse, ApiResponse
@@ -155,6 +156,9 @@ async def delete_user(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="用户不存在")
+    # 将该用户发布的Agent的publisher_id置为NULL，解除外键引用
+    from sqlalchemy import update as sa_update
+    await db.execute(sa_update(Agent).where(Agent.publisher_id == user_id).values(publisher_id=None))
     await db.delete(user)
     await db.commit()
     return ApiResponse(message="用户已删除")
