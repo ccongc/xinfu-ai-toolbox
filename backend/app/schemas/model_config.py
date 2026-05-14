@@ -1,9 +1,11 @@
 """大模型配置Schema"""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 
 class ModelConfigCreateRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     name: str = Field(..., min_length=1, max_length=100)
     provider: str = Field(..., min_length=1, max_length=50)
     model_type: str | None = None
@@ -15,6 +17,8 @@ class ModelConfigCreateRequest(BaseModel):
 
 
 class ModelConfigUpdateRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     name: str | None = Field(None, min_length=1, max_length=100)
     provider: str | None = Field(None, min_length=1, max_length=50)
     model_type: str | None = None
@@ -26,6 +30,8 @@ class ModelConfigUpdateRequest(BaseModel):
 
 
 class ModelConfigResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+
     id: int
     name: str
     provider: str
@@ -37,9 +43,6 @@ class ModelConfigResponse(BaseModel):
     has_api_key: bool = False
     created_at: datetime
     updated_at: datetime | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class ModelTestRequest(BaseModel):

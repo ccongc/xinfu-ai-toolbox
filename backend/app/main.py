@@ -25,18 +25,28 @@ async def _get_admin_salt() -> str:
         return ""
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """应用生命周期"""
-    # 启动时初始化数据库（连接失败不崩溃，等数据库就绪）
+_initialized = False
+
+
+async def _ensure_initialized():
+    """确保数据库和种子数据已初始化（延迟初始化）"""
+    global _initialized
+    if _initialized:
+        return
     try:
         async with async_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-
-        # 初始化种子数据
         await _init_seed_data()
+        _initialized = True
     except Exception as e:
-        print(f"⚠️ 数据库初始化失败（将在首次请求时重试）: {e}")
+        print(f"⚠️ 数据库初始化失败: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期"""
+    # 启动时尝试初始化（失败不崩溃，首次请求时重试）
+    await _ensure_initialized()
 
     yield
 
@@ -200,6 +210,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# 延迟初始化中间件
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class InitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        await _ensure_initialized()
+        return await call_next(request)
+
+
+app.add_middleware(InitMiddleware)
 
 # 自定义中间件
 app.add_middleware(RateLimitMiddleware)
