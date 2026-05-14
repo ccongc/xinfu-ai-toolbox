@@ -21,5 +21,7 @@ COPY backend/ ./
 # 复制前端构建产物
 COPY --from=frontend-build /app/frontend/dist ./static/
 
+RUN chmod +x start.sh
+
 EXPOSE 8000
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD ["./start.sh"]
