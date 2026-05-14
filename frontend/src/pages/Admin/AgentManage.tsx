@@ -13,6 +13,15 @@ const statusMap: Record<string, { color: string; label: string }> = {
   offline: { color: 'warning', label: '已下架' },
 }
 
+const categoryOptions = [
+  { label: '智能客服', value: '智能客服' },
+  { label: '知识问答', value: '知识问答' },
+  { label: '数据分析', value: '数据分析' },
+  { label: '流程自动化', value: '流程自动化' },
+  { label: '内容生成', value: '内容生成' },
+  { label: '其他', value: '其他' },
+]
+
 export default function AgentManage() {
   const [agents, setAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -20,11 +29,14 @@ export default function AgentManage() {
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined)
   const [publishModal, setPublishModal] = useState(false)
+  const [editModal, setEditModal] = useState(false)
+  const [editAgent, setEditAgent] = useState<any>(null)
   const [reviewModal, setReviewModal] = useState(false)
   const [reviewAgent, setReviewAgent] = useState<any>(null)
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve')
   const [reviewComment, setReviewComment] = useState('')
-  const [form] = Form.useForm()
+  const [publishForm] = Form.useForm()
+  const [editForm] = Form.useForm()
 
   const fetchAgents = () => {
     setLoading(true)
@@ -39,14 +51,45 @@ export default function AgentManage() {
 
   const handlePublish = async () => {
     try {
-      const values = await form.validateFields()
+      const values = await publishForm.validateFields()
       await adminAgentApi.publish(values)
       message.success('发布成功')
       setPublishModal(false)
-      form.resetFields()
+      publishForm.resetFields()
       fetchAgents()
     } catch (e: any) {
       message.error(e.message || '发布失败')
+    }
+  }
+
+  const handleEdit = (record: any) => {
+    setEditAgent(record)
+    editForm.setFieldsValue({
+      name: record.name,
+      description: record.description,
+      detail: record.detail || '',
+      scenarios: record.scenarios || '',
+      design_idea: record.design_idea || '',
+      category: record.category,
+      embed_type: record.embed_type,
+      embed_code: record.embed_code || '',
+      api_endpoint: record.api_endpoint || '',
+      icon_url: record.icon_url || '',
+      cover_url: record.cover_url || '',
+      sort_order: record.sort_order || 0,
+    })
+    setEditModal(true)
+  }
+
+  const handleEditSave = async () => {
+    try {
+      const values = await editForm.validateFields()
+      await adminAgentApi.update(editAgent.id, values)
+      message.success('更新成功')
+      setEditModal(false)
+      fetchAgents()
+    } catch (e: any) {
+      message.error(e.message || '更新失败')
     }
   }
 
@@ -115,9 +158,10 @@ export default function AgentManage() {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 260,
       render: (_: any, record: any) => (
         <Space size="small">
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
           {record.status === 'pending' && (
             <>
               <Button type="link" size="small" onClick={() => { setReviewAgent(record); setReviewAction('approve'); setReviewModal(true) }}>通过</Button>
@@ -136,6 +180,52 @@ export default function AgentManage() {
       ),
     },
   ]
+
+  const agentFormItems = (isEdit: boolean) => (
+    <>
+      <Form.Item name="name" label="名称" rules={[{ required: true }]}>
+        <Input />
+      </Form.Item>
+      <Form.Item name="description" label="描述" rules={[{ required: true }]}>
+        <TextArea rows={2} />
+      </Form.Item>
+      <Form.Item name="detail" label="功能介绍">
+        <TextArea rows={3} />
+      </Form.Item>
+      <Form.Item name="scenarios" label="解决场景">
+        <TextArea rows={2} />
+      </Form.Item>
+      <Form.Item name="design_idea" label="设计思路">
+        <TextArea rows={2} />
+      </Form.Item>
+      <Form.Item name="category" label="分类">
+        <Select options={categoryOptions} />
+      </Form.Item>
+      <Form.Item name="embed_type" label="嵌入方式" rules={[{ required: true }]} initialValue="api">
+        <Select options={[
+          { label: 'API调用', value: 'api' },
+          { label: 'iframe嵌入', value: 'iframe' },
+        ]} />
+      </Form.Item>
+      <Form.Item name="embed_code" label="iframe代码">
+        <TextArea rows={3} />
+      </Form.Item>
+      <Form.Item name="api_endpoint" label="API端点">
+        <Input placeholder="https://api.example.com/v1/chat/completions" />
+      </Form.Item>
+      <Form.Item name="icon_url" label="图标URL">
+        <Input />
+      </Form.Item>
+      <Form.Item name="cover_url" label="封面URL">
+        <Input />
+      </Form.Item>
+      {isEdit && (
+        <Form.Item name="sort_order" label="排序权重">
+          <Input type="number" />
+        </Form.Item>
+      )}
+    </>
+  )
 
   return (
     <div>
@@ -169,47 +259,21 @@ export default function AgentManage() {
         onCancel={() => setPublishModal(false)}
         width={600}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="description" label="描述" rules={[{ required: true }]}>
-            <TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="detail" label="功能介绍">
-            <TextArea rows={3} />
-          </Form.Item>
-          <Form.Item name="scenarios" label="解决场景">
-            <TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="design_idea" label="设计思路">
-            <TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="category" label="分类">
-            <Select options={[
-              { label: '智能客服', value: '智能客服' },
-              { label: '知识问答', value: '知识问答' },
-              { label: '数据分析', value: '数据分析' },
-              { label: '流程自动化', value: '流程自动化' },
-              { label: '内容生成', value: '内容生成' },
-              { label: '其他', value: '其他' },
-            ]} />
-          </Form.Item>
-          <Form.Item name="embed_type" label="嵌入方式" rules={[{ required: true }]} initialValue="api">
-            <Select options={[
-              { label: 'API调用', value: 'api' },
-              { label: 'iframe嵌入', value: 'iframe' },
-            ]} />
-          </Form.Item>
-          <Form.Item name="embed_code" label="iframe代码">
-            <TextArea rows={3} />
-          </Form.Item>
-          <Form.Item name="api_endpoint" label="API端点">
-            <Input placeholder="https://api.example.com/v1/chat/completions" />
-          </Form.Item>
-          <Form.Item name="icon_url" label="图标URL">
-            <Input />
-          </Form.Item>
+        <Form form={publishForm} layout="vertical">
+          {agentFormItems(false)}
+        </Form>
+      </Modal>
+
+      {/* 编辑Agent */}
+      <Modal
+        title="编辑Agent"
+        open={editModal}
+        onOk={handleEditSave}
+        onCancel={() => setEditModal(false)}
+        width={600}
+      >
+        <Form form={editForm} layout="vertical">
+          {agentFormItems(true)}
         </Form>
       </Modal>
 
