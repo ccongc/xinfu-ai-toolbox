@@ -37,7 +37,6 @@ export default function AgentChat() {
         const agentData = agentRes?.data || agentRes
         setAgent(agentData)
 
-        // 获取模板
         const templateId = agentData.template_id
         if (templateId) {
           const tRes = await templateApi.detail(templateId)
@@ -60,7 +59,6 @@ export default function AgentChat() {
   }, [messages])
 
   const styleConfig = template?.style_config || {}
-  const layoutConfig = template?.layout_config || {}
 
   const handleSend = async () => {
     if (!inputValue.trim() || sending) return
@@ -71,7 +69,6 @@ export default function AgentChat() {
 
     try {
       if (agent?.embed_type === 'api' && agent?.api_endpoint) {
-        // API模式调用
         const res = await fetch(agent.api_endpoint, {
           method: 'POST',
           headers: {
@@ -87,7 +84,6 @@ export default function AgentChat() {
         const reply = data?.choices?.[0]?.message?.content || data?.response || data?.answer || data?.data || JSON.stringify(data)
         setMessages(prev => [...prev, { role: 'assistant', content: reply }])
       } else {
-        // 无API端点，模拟回复
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: '该Agent暂未配置API端点，无法进行对话。',
@@ -112,13 +108,37 @@ export default function AgentChat() {
     )
   }
 
-  // iframe模式
+  // iframe模式 - 全屏嵌入
   if (agent?.embed_type === 'iframe' && agent?.embed_code) {
+    // 从embed_code中提取iframe src
+    const srcMatch = agent.embed_code.match(/src=["']([^"']+)["']/)
+    const iframeSrc = srcMatch ? srcMatch[1] : ''
+    // 提取style中的宽高
+    const styleMatch = agent.embed_code.match(/style=["']([^"']+)["']/)
+
     return (
       <Layout style={{ minHeight: '100vh' }}>
         <Header />
-        <div style={{ flex: 1 }}>
-          <div dangerouslySetInnerHTML={{ __html: agent.embed_code }} />
+        <div className="chat-iframe-wrapper">
+          {iframeSrc ? (
+            <iframe
+              src={iframeSrc}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                flex: 1,
+                minHeight: 'calc(100vh - 64px)',
+              }}
+              allow="microphone *; *"
+              title={agent.name || 'AI对话'}
+            />
+          ) : (
+            <div
+              style={{ flex: 1, width: '100%', minHeight: 'calc(100vh - 64px)' }}
+              dangerouslySetInnerHTML={{ __html: agent.embed_code }}
+            />
+          )}
         </div>
       </Layout>
     )
@@ -136,69 +156,71 @@ export default function AgentChat() {
     <Layout style={{ minHeight: '100vh', background: bgColor }}>
       <Header />
       <div className="chat-container">
-        {/* 头部 */}
-        <div style={{
-          padding: '12px 24px',
-          background: '#fff',
-          borderBottom: '1px solid #f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}>
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(`/agent/${id}`)}
-          />
-          <Text strong>{agent?.name || 'AI对话'}</Text>
-        </div>
-
-        {/* 消息区域 */}
-        <div className="chat-messages" style={{ background: bgColor }}>
-          {messages.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
-              {welcomeMsg}
-            </div>
-          )}
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-bot'}`}
-              style={{
-                background: msg.role === 'user' ? userBubbleColor : botBubbleColor,
-                color: msg.role === 'user' ? '#fff' : 'rgba(0,0,0,0.88)',
-              }}
-            >
-              {msg.content}
-            </div>
-          ))}
-          {sending && (
-            <div className="chat-bubble chat-bubble-bot" style={{ background: botBubbleColor }}>
-              <Spin size="small" />
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* 输入区域 */}
-        <div className="chat-input-area">
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Input
-              size="large"
-              placeholder={placeholder}
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onPressEnter={handleSend}
-              disabled={sending}
-            />
+        <div className="chat-container-inner">
+          {/* 头部 */}
+          <div style={{
+            padding: '12px 24px',
+            background: '#fff',
+            borderBottom: '1px solid #f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}>
             <Button
-              type="primary"
-              size="large"
-              icon={<SendOutlined />}
-              onClick={handleSend}
-              loading={sending}
-              style={{ background: styleConfig.sendButtonColor || primaryColor }}
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(`/agent/${id}`)}
             />
+            <Text strong>{agent?.name || 'AI对话'}</Text>
+          </div>
+
+          {/* 消息区域 */}
+          <div className="chat-messages" style={{ background: bgColor }}>
+            {messages.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
+                {welcomeMsg}
+              </div>
+            )}
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-bot'}`}
+                style={{
+                  background: msg.role === 'user' ? userBubbleColor : botBubbleColor,
+                  color: msg.role === 'user' ? '#fff' : 'rgba(0,0,0,0.88)',
+                }}
+              >
+                {msg.content}
+              </div>
+            ))}
+            {sending && (
+              <div className="chat-bubble chat-bubble-bot" style={{ background: botBubbleColor }}>
+                <Spin size="small" />
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* 输入区域 */}
+          <div className="chat-input-area">
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Input
+                size="large"
+                placeholder={placeholder}
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onPressEnter={handleSend}
+                disabled={sending}
+              />
+              <Button
+                type="primary"
+                size="large"
+                icon={<SendOutlined />}
+                onClick={handleSend}
+                loading={sending}
+                style={{ background: styleConfig.sendButtonColor || primaryColor }}
+              />
+            </div>
           </div>
         </div>
       </div>
