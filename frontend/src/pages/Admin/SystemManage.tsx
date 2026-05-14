@@ -21,16 +21,20 @@ function ConfigTab() {
   const [configs, setConfigs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const fetchConfigs = () => {
+    setLoading(true)
     systemApi.configs().then((res: any) => {
       setConfigs(res?.data || res || [])
     }).finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { fetchConfigs() }, [])
 
   const handleUpdate = async (key: string, value: string) => {
     try {
       await systemApi.updateConfig(key, { config_value: value })
       message.success('更新成功')
+      fetchConfigs()
     } catch (e: any) {
       message.error(e.message || '更新失败')
     }

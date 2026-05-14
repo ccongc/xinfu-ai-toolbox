@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Layout, Menu, Button, Dropdown, Avatar } from 'antd'
 import {
   HomeOutlined,
@@ -14,6 +15,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom'
 import { isLoggedIn, getUserInfo, logout, isAdmin } from '../utils/auth'
 import { authApi } from '../services/api'
+import request from '../utils/request'
 
 const { Header: AntHeader } = Layout
 
@@ -22,6 +24,16 @@ export default function Header() {
   const location = useLocation()
   const loggedIn = isLoggedIn()
   const user = getUserInfo()
+  const [siteName, setSiteName] = useState('')
+  const [siteLogo, setSiteLogo] = useState('')
+
+  useEffect(() => {
+    request.get('/config/site').then((res: any) => {
+      const data = res?.data || res
+      if (data?.siteName) setSiteName(data.siteName)
+      if (data?.siteLogo) setSiteLogo(data.siteLogo)
+    }).catch(() => {})
+  }, [])
 
   const navItems = [
     { key: '/', label: '首页', icon: <HomeOutlined /> },
@@ -66,10 +78,11 @@ export default function Header() {
     <AntHeader style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <div
-          style={{ color: '#fff', fontSize: 18, fontWeight: 600, cursor: 'pointer', marginRight: 40, whiteSpace: 'nowrap' }}
+          style={{ color: '#fff', fontSize: 18, fontWeight: 600, cursor: 'pointer', marginRight: 40, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8 }}
           onClick={() => navigate('/')}
         >
-          信服AI工具箱
+          {siteLogo && <img src={siteLogo} alt="logo" style={{ height: 28, objectFit: 'contain' }} />}
+          {siteName || '信服AI工具箱'}
         </div>
         <Menu
           theme="dark"
