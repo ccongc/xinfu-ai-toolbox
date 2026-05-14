@@ -12,8 +12,15 @@ export default function UserManage() {
   const [editUser, setEditUser] = useState<any>(null)
   const [resetModal, setResetModal] = useState(false)
   const [resetUser, setResetUser] = useState<any>(null)
+  const [roles, setRoles] = useState<any[]>([])
   const [resetForm] = Form.useForm()
   const [form] = Form.useForm()
+
+  useEffect(() => {
+    userApi.roles().then((res: any) => {
+      setRoles(res?.data || res || [])
+    }).catch(() => {})
+  }, [])
 
   const fetchUsers = () => {
     setLoading(true)
@@ -145,10 +152,10 @@ export default function UserManage() {
             <Input />
           </Form.Item>
           <Form.Item name="role_id" label="角色">
-            <Select options={[
-              { label: '管理员', value: 1 },
-              { label: '普通用户', value: 2 },
-            ]} />
+            <Select options={roles.map((r: any) => ({
+              label: r.name === 'admin' ? '管理员' : r.name === 'user' ? '普通用户' : r.name,
+              value: r.id,
+            }))} />
           </Form.Item>
           <Form.Item name="status" label="状态">
             <Select options={[

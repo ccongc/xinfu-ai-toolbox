@@ -15,6 +15,14 @@ from ...utils.op_log import write_op_log
 router = APIRouter()
 
 
+@router.get("/roles", response_model=ApiResponse[list[dict]])
+async def list_roles(db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)):
+    """角色列表"""
+    result = await db.execute(select(Role).order_by(Role.id))
+    roles = result.scalars().all()
+    return ApiResponse(data=[{"id": r.id, "name": r.name, "description": r.description} for r in roles])
+
+
 @router.get("", response_model=ApiResponse[PaginatedResponse[UserListResponse]])
 async def list_users(
     page: int = 1, page_size: int = 20,

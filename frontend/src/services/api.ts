@@ -39,6 +39,7 @@ export const adminAgentApi = {
 // ===== 用户管理 =====
 export const userApi = {
   list: (params?: any) => request.get('/admin/users', { params }),
+  roles: () => request.get('/admin/users/roles'),
   detail: (id: number) => request.get(`/admin/users/${id}`),
   update: (id: number, data: any) => request.put(`/admin/users/${id}`, data),
   assignRole: (id: number, data: any) => request.put(`/admin/users/${id}/role`, data),
